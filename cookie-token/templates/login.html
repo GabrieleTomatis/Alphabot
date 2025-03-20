@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>LOGIN</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Login</h1>
+    </header>
+    {% if alert %}
+    <p style="color:red;">{{ alert }}</p>
+    {% endif %}
+    <form method="POST">
+        <input type="text" name="username" placeholder="Username" required><br>
+        <input type="password" name="password" placeholder="Password" required><br>
+        <input type="submit" value="Login">
+    </form>
+    <div class="account-link">
+        <p>Non hai un account? <a href="{{ url_for('create_account') }}">Crea account</a></p>
+    </div>
+    <footer>
+        <p>Giulio Paternò - Gabriele Tomatis  |  ALPHABOT GG  |  5BROB</p>
+    </footer>
+</body>
+</html>

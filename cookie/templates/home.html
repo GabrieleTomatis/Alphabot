@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telecomando Alphabot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    function sendCommand(cmd) {
+      fetch("/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "cmd=" + cmd
+      }).then(response => {
+        if (!response.ok) {
+          alert("Errore nell'invio del comando!");
+        }
+      });
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Benvenuto, {{ username }}!</h1>
+    <a href="{{ url_for('logout') }}">Logout</a>
+  </header>
+  <div class="controller">
+    <!-- Layout del telecomando virtuale -->
+    <button onmousedown="sendCommand('')" onmouseup="sendCommand('stop')"></button> 
+    <button onmousedown="sendCommand('forward')" onmouseup="sendCommand('stop')">▲</button>
+    <button onmousedown="sendCommand('')" onmouseup="sendCommand('stop')"></button> 
+    <button onmousedown="sendCommand('left')" onmouseup="sendCommand('stop')">◀</button>
+    <button onmousedown="sendCommand('stop')" onmouseup="sendCommand('stop')">■</button>
+    <button onmousedown="sendCommand('right')" onmouseup="sendCommand('stop')">▶</button>
+    <button onmousedown="sendCommand('')" onmouseup="sendCommand('stop')"></button> 
+    <button onmousedown="sendCommand('backward')" onmouseup="sendCommand('stop')">▼</button>
+    <button onmousedown="sendCommand('')" onmouseup="sendCommand('stop')"></button> 
+  </div>
+  <footer>
+    <p>Giulio Paternò - Gabriele Tomatis  |  ALPHABOT GG  |  5BROB</p>
+  </footer>
+</body>
+</html>
