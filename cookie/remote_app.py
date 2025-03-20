@@ -116,7 +116,7 @@ def command():
     if not token or not verify_token(token):  #Se il token non è presente o non è valido
         return "Unauthorized", 401  #Ritorno un errore di autorizzazione
 
-    command = request.form.get("cmd")  # Recupero il comando dal form
+    #command = request.form.get("cmd")  # Recupero il comando dal form
 
     print("Comando ricevuto: ", command)
     
