@@ -118,7 +118,7 @@ def command():
 
     command = request.form.get("cmd")  # Recupero il comando dal form
 
-    print("Comando ricevuto: ", command)
+    #print("Comando ricevuto: ", command)
     
     if command == "forward":
         left = -45
