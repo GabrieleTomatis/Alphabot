@@ -4,8 +4,9 @@ import datetime
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
-import alphaLib
-robot = alphaLib()
+from alphaLib import AlphaBot
+robot = AlphaBot()
+robot.setMotor(0, 0)  #Fermo i motori all'avvio
 
 app = Flask(__name__)
 app.secret_key = "secret_key_paterno_tomatis"
@@ -115,25 +116,28 @@ def command():
     if not token or not verify_token(token):  #Se il token non è presente o non è valido
         return "Unauthorized", 401  #Ritorno un errore di autorizzazione
 
-    command = request.form.get("cmd")  #Recupero il comando dal form
+    command = request.form.get("cmd")  # Recupero il comando dal form
 
     print("Comando ricevuto: ", command)
     
-    if "forward" in command:  #Se il comando è 'forward'
+    if command == "forward":
         left = -45
         right = 55
-    elif "backward" in command:  #Se il comando è 'backward'
+    elif command == "backward":
         left = 45
         right = -55
-    elif "left" in command:  #Se il comando è 'left'
+    elif command == "left":
         left = 0
         right = -35
-    elif "right" in command:  #Se il comando è 'right'
+    elif command == "right":
         left = 35
         right = 0
-    else:  #Se il comando non è riconosciuto
+    elif command == "stop":  #Se il comando è stop, fermo i motori
         left = 0
         right = 0
+    else:
+        left = 0
+        right = 0  #Se il comando non è riconosciuto, fermo tutto
 
     robot.setMotor(left, right)  #Invio i valori dei motori al robot per eseguire il comando
     

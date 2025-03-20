@@ -1,12 +1,31 @@
 from flask import Flask, render_template, request, redirect, url_for, make_response
+import jwt
+import datetime
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
-import alphaLib
-robot = alphaLib()
+from alphaLib import AlphaBot
+robot = AlphaBot()
+robot.setMotor(0, 0)  #Fermo i motori all'avvio
 
 app = Flask(__name__)
 app.secret_key = "secret_key_paterno_tomatis"
+
+JWT_SECRET_KEY = "secret_key_paterno_tomatis_token"
+
+#Creo un token JWT che contiene il nome dell'utente e una data di scadenza
+def generate_token(username):
+    expiration_time = datetime.datetime.now() + datetime.timedelta(days=1) #Imposto la data di scadenza del token
+    payload = {"username": username, "exp": expiration_time}  #Creo il payload del token
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")  #Ritorno il token codificato
+
+#Verifico la validità del token JWT decodificandolo e controllando la sua scadenza
+def verify_token(token):
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])  #Decodifico il token
+        return payload["username"]  #Ritorno il nome utente se il token è valido
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):  #Gestisco i casi in cui il token è scaduto o invalido
+        return None
 
 #Mi connetto al database SQLite per eseguire operazioni
 def get_db_connection():
@@ -48,8 +67,8 @@ def get_user(username):
 
 @app.route("/", methods=["GET", "POST"])
 def login():
-    cookie_username = request.cookies.get("username")  #Controllo se esiste un cookie con il nome dell'utente
-    if cookie_username:  #Se il cookie esiste, vado direttamente alla home
+    token_cookie = request.cookies.get("mycookie")  #Controllo se esiste un cookie con il token dell'utente
+    if token_cookie and verify_token(token_cookie):  #Se il token è valido, vado direttamente alla home
         return redirect(url_for("home"))
     
     if request.method == "POST":  #Se l'utente invia il form di login
@@ -58,8 +77,9 @@ def login():
 
         user = get_user(username)  #Recupero l'utente dal database
         if user and check_password_hash(user["password"], password):  #Verifico che la password corrisponda
+            token = generate_token(username)  #Se le credenziali sono corrette, genero un token
             resp = make_response(redirect(url_for("home")))  #Creo una risposta con il redirect alla home
-            resp.set_cookie("username", username, max_age=60*60*24)  #Imposto il cookie con il nome dell'utente
+            resp.set_cookie("mycookie", token, max_age=60*60*24)  #Imposto il cookie con il token
             return resp
         else:
             return render_template("login.html", alert="Credenziali errate")  #Se le credenziali sono errate, mostro un messaggio di errore
@@ -75,45 +95,49 @@ def create_account():
         if add_user(username, password):  #Aggiungo il nuovo utente al database
             return redirect(url_for("login"))  #Dopo la registrazione, redirigo al login
         else:
-            return render_template("create_account.html", alert="Username già esistente")  #Se lo username è già presente, mostro un errore
+            return render_template("create_account.html", alert="Username già esistente")  # Se lo username è già presente, mostro un errore
     
     return render_template("create_account.html")  #Se la richiesta è GET, mostro il modulo di registrazione
 
 @app.route("/home")
 def home():
-    cookie_username = request.cookies.get("username")  #Recupero il nome utente dal cookie
-    if cookie_username:  #Se il cookie esiste
-        return render_template("home.html", username=cookie_username)  #Mostro la pagina home con il nome utente
+    token = request.cookies.get("mycookie")  #Recupero il token dal cookie
+    if token and verify_token(token):  #Se il token è valido
+        username = verify_token(token)  #Recupero il nome utente dal token
+        return render_template("home.html", username=username)  #Mostro la pagina home con il nome utente
     
-    resp = make_response(redirect(url_for("login")))  #Se il cookie non è presente, redirigo al login
-    resp.delete_cookie("username")  #Elimino il cookie del nome utente
+    resp = make_response(redirect(url_for("login")))  #Se il token non è valido, redirigo al login
+    resp.delete_cookie("mycookie")  #Elimino il cookie del token
     return resp
 
 @app.route("/command", methods=["POST"])
 def command():
-    cookie_username = request.cookies.get("username")  #Recupero il nome utente dal cookie
-    if not cookie_username:  #Se il cookie non è presente
+    token = request.cookies.get("mycookie")  #Recupero il token dal cookie
+    if not token or not verify_token(token):  #Se il token non è presente o non è valido
         return "Unauthorized", 401  #Ritorno un errore di autorizzazione
 
-    command = request.form.get("cmd")  #Recupero il comando dal form
+    command = request.form.get("cmd")  # Recupero il comando dal form
 
     print("Comando ricevuto: ", command)
     
-    if "forward" in command:  #Se il comando è 'forward'
+    if command == "forward":
         left = -45
         right = 55
-    elif "backward" in command:  #Se il comando è 'backward'
+    elif command == "backward":
         left = 45
         right = -55
-    elif "left" in command:  #Se il comando è 'left'
+    elif command == "left":
         left = 0
         right = -35
-    elif "right" in command:  #Se il comando è 'right'
+    elif command == "right":
         left = 35
         right = 0
-    else:  #Se il comando non è riconosciuto
+    elif command == "stop":  #Se il comando è stop, fermo i motori
         left = 0
         right = 0
+    else:
+        left = 0
+        right = 0  #Se il comando non è riconosciuto, fermo tutto
 
     robot.setMotor(left, right)  #Invio i valori dei motori al robot per eseguire il comando
     
@@ -122,7 +146,7 @@ def command():
 @app.route("/logout")
 def logout():
     resp = make_response(redirect(url_for("login")))  #Creo una risposta con il redirect al login
-    resp.delete_cookie("username")  #Elimino il cookie del nome utente
+    resp.delete_cookie("mycookie")  #Elimino il cookie del token
     return resp  #Ritorno la risposta con il logout effettuato
 
 if __name__ == "__main__":
